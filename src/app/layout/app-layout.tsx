@@ -45,7 +45,7 @@ function SidebarLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => v
       onClick={onNavigate}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-lg px-3 py-2 text-[14px] text-muted-foreground transition-colors hover:bg-black/[0.04] hover:text-foreground',
+          'flex items-center gap-3 rounded-lg px-3 py-2.5 text-[14px] text-muted-foreground transition-colors hover:bg-black/[0.04] hover:text-foreground',
           isActive && 'bg-surface font-medium text-foreground shadow-pill hover:bg-surface',
         )
       }
@@ -124,11 +124,11 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         <BrandLockup />
       </div>
       <OrgSwitcher />
-      <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-5" aria-label="Main">
+      <nav className="flex-1 space-y-7 overflow-y-auto px-3 py-6" aria-label="Main">
         {groups.map((g) => (
           <div key={g.label}>
-            <p className="mb-1.5 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">{g.label}</p>
-            <div className="space-y-0.5">
+            <p className="mb-2 px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground/80">{g.label}</p>
+            <div className="space-y-1.5">
               {g.items.map((item) => (
                 <SidebarLink key={item.to} item={item} onNavigate={onNavigate} />
               ))}

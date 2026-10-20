@@ -21,7 +21,7 @@ export const env = {
 } as const
 
 export const PRODUCT = {
-  name: raw.VITE_PRODUCT_NAME ?? 'FarmLedger',
+  name: raw.VITE_PRODUCT_NAME ?? 'The Harvest',
   company: 'CloudTech Analytics',
   tagline: 'Farm records for poultry, fish and crops',
 } as const

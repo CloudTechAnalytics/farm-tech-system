@@ -30,7 +30,7 @@ The same pattern as The Counsel: separate Testing and Production environments, e
 | `VITE_SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | the project's anon (public) key |
 | `VITE_APP_ENV` | `staging` or `production` (non-production builds show a badge in the sidebar) |
-| `VITE_PRODUCT_NAME` | optional, defaults to FarmLedger |
+| `VITE_PRODUCT_NAME` | optional, defaults to The Harvest |
 
 - Set the production branch to the branch for that environment. The Counsel was once served stale builds because this pointed at a deleted branch.
 - `vercel.json` already contains the SPA rewrite and security headers.

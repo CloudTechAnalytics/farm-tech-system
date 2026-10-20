@@ -1,30 +1,27 @@
 import { PRODUCT } from '@/shared/config/env'
 import { cn } from '@/shared/lib/utils'
 
-/** Sprout over two ledger lines: growth that is written down. Black and white. */
-export function BrandMark({ className, inverted = false }: { className?: string; inverted?: boolean }) {
-  const bg = inverted ? '#ffffff' : '#111111'
-  const fg = inverted ? '#111111' : '#ffffff'
+/** Brand green tile with a geometric white "H", in the same family as The Counsel's mark. */
+export function BrandMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" className={cn('h-8 w-8', className)} aria-hidden>
-      <rect width="64" height="64" rx="14" fill={bg} />
-      <path d="M14 46h36" stroke={fg} strokeWidth="3" strokeLinecap="round" />
-      <path d="M14 52h36" stroke={fg} strokeOpacity="0.55" strokeWidth="3" strokeLinecap="round" />
-      <path d="M32 40V22" stroke={fg} strokeWidth="3" strokeLinecap="round" />
-      <path d="M32 28c0-7 5-12 13-12 0 8-5 12-13 12Z" fill={fg} />
-      <path d="M32 33c0-6-4-10-11-10 0 7 4 10 11 10Z" fill={fg} fillOpacity="0.7" />
+    <svg viewBox="0 0 120 120" className={cn('h-9 w-9 shrink-0', className)} aria-hidden>
+      <rect width="120" height="120" rx="28" fill="#23845a" />
+      <path
+        fill="#ffffff"
+        d="M 36 30 H 52 V 52 H 68 V 30 H 84 V 90 H 68 V 66 H 52 V 90 H 36 Z"
+      />
     </svg>
   )
 }
 
+/** Mark plus the serif wordmark, e.g. "The Harvest". */
 export function BrandLockup({ inverted = false, className }: { inverted?: boolean; className?: string }) {
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
-      <BrandMark inverted={inverted} />
-      <div className="leading-tight">
-        <div className={cn('text-[16px] font-semibold tracking-tight', inverted ? 'text-white' : 'text-foreground')}>{PRODUCT.name}</div>
-        <div className={cn('text-[11px]', inverted ? 'text-white/60' : 'text-muted-foreground')}>by {PRODUCT.company}</div>
-      </div>
+    <div className={cn('flex items-center gap-3', className)}>
+      <BrandMark />
+      <span className={cn('font-brand text-[19px] font-semibold leading-none tracking-tight', inverted ? 'text-white' : 'text-foreground')}>
+        {PRODUCT.name}
+      </span>
     </div>
   )
 }

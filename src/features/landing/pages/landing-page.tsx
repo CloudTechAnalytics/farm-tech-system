@@ -22,7 +22,7 @@ function Header() {
         <Link to="/" aria-label={`${PRODUCT.name} home`}>
           <BrandLockup />
         </Link>
-        <nav className="ml-6 hidden items-center gap-6 text-sm text-muted-foreground lg:flex" aria-label="Page">
+        <nav className="ml-10 hidden items-center gap-10 text-sm text-muted-foreground lg:flex" aria-label="Page">
           {NAV.map((n) => (
             <a key={n.href} href={n.href} className="hover:text-foreground">
               {n.label}

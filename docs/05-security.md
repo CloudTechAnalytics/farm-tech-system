@@ -44,7 +44,7 @@ A mutation check confirmed these tests catch a regression: deliberately opening 
 
 ## Weaknesses found in The Counsel
 
-These were found during inspection and are **not** present in FarmLedger. They should be checked and fixed in The Counsel separately; nothing was changed there.
+These were found during inspection and are **not** present in The Harvest. They should be checked and fixed in The Counsel separately; nothing was changed there.
 
 1. `profile_update_self` permits a user to update `profiles.is_platform_admin` on their own row, which looks like a privilege escalation to platform admin.
 2. `log_audit()` is callable by any signed-in user for any organization and with any actor ID.

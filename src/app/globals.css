@@ -1,11 +1,13 @@
 @import '@fontsource-variable/inter';
+/* Wordmark only (as in The Counsel): Playfair Display 600. */
+@import '@fontsource/playfair-display/600.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /*
-  FarmLedger palette: clean neutral greys and white, a near-black primary,
+  The Harvest palette: clean neutral greys and white, a near-black primary,
   and one green brand colour for active states and links. Production types
   keep one hue each, used only for small badges, icons and chart series:
   poultry = amber, fish = blue, crop = green. No decorative gradients.

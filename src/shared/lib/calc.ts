@@ -54,7 +54,7 @@ export function feedConversionRatio(feedKg: number, weightGainKg: number): numbe
 /**
  * Recorded income minus recorded expenses. This is a CASH operating surplus,
  * not accounting profit: it excludes depreciation, unpaid bills, stock
- * valuation and anything not recorded in FarmLedger.
+ * valuation and anything not recorded in The Harvest.
  */
 export function operatingSurplus(income: number, expense: number): number {
   return roundMoney(income - expense)

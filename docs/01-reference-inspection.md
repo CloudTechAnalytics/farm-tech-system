@@ -26,9 +26,9 @@ Inspected: `CloudTechAnalytics/thecounsels-testing` (branch `testing`, commit `f
 | Tests | None for the live app (the only suite targets the retired Express backend) |
 | Types | `database.types.ts` is hand-written and often drifts |
 
-## 2. Weaknesses found, and what FarmLedger does instead
+## 2. Weaknesses found, and what The Harvest does instead
 
-| # | Weakness in The Counsel | Risk | FarmLedger approach |
+| # | Weakness in The Counsel | Risk | The Harvest approach |
 |---|---|---|---|
 | W1 | `profile_update_self` lets a user update any column of their own `profiles` row, including `is_platform_admin`. I found no trigger or column grant that blocks it. | **Critical.** Any signed-in user may be able to make themselves platform admin with one `update`. This should be verified and fixed in The Counsel separately. | Platform admin status lives in a separate `platform_admins` table with no client write policy. Profiles expose only safe columns for update (column-level `grant update`). |
 | W2 | `log_audit()` is `security definer`, granted to `authenticated`, and takes arbitrary `p_org` and `p_actor_id`. | **High.** Any user can write forged audit entries into any organization. | Audit events are written only by database triggers and internal RPCs. Clients have no insert path. |
@@ -41,7 +41,7 @@ Inspected: `CloudTechAnalytics/thecounsels-testing` (branch `testing`, commit `f
 | W9 | Live computation over maintained counters was learned the hard way three times. | (Lesson, not a bug.) | Adopted from day one: balances and populations are views over ledgers, never editable columns. |
 | W10 | `org_update_admins` allows admins to update every column of `organizations`, including `status` and `plan`. | A firm admin could move their own plan or status. | Organization updates go through a column-limited grant; plan and status change only through platform functions. |
 
-## 3. What FarmLedger reuses unchanged in spirit
+## 3. What The Harvest reuses unchanged in spirit
 
 - Thin client over Supabase. No custom backend server.
 - The feature-folder convention (`services` → `hooks` → `pages`).
@@ -52,13 +52,13 @@ Inspected: `CloudTechAnalytics/thecounsels-testing` (branch `testing`, commit `f
 - Numbered SQL migrations, Testing then Production via `supabase db push`.
 - Vercel SPA hosting with a rewrite rule.
 
-## 4. What FarmLedger deliberately does not reuse
+## 4. What The Harvest deliberately does not reuse
 
-- The Counsel's visual design (ivory, charcoal, brass, Playfair). FarmLedger gets its own agricultural design system.
+- The Counsel's visual design (ivory, charcoal, brass, Playfair). The Harvest gets its own agricultural design system.
 - Any legal tables, business rules, data, keys or project refs.
 - Paystack, Resend, Gemini, pg_cron reminder engines. Payments and email are out of scope for release 1.
 
-## 5. FarmLedger schema and tenant-isolation plan
+## 5. The Harvest schema and tenant-isolation plan
 
 See [`docs/04-database.md`](04-database.md) for the full schema. The key decisions:
 

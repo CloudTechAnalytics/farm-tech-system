@@ -9,8 +9,8 @@ export default {
   theme: {
     container: { center: true, padding: '1rem' },
     extend: {
-      // One typeface everywhere, as in a standard Figma UI kit.
-      fontFamily: { display: sans, sans },
+      // Inter for the interface; Playfair Display only for the wordmark.
+      fontFamily: { display: sans, sans, brand: ['"Playfair Display"', 'Georgia', 'serif'] },
       colors: {
         border: hsl('--border'),
         input: hsl('--input'),

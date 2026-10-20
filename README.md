@@ -1,4 +1,4 @@
-# FarmLedger by CloudTech Analytics
+# The Harvest by CloudTech Analytics
 
 Farm management and business records for poultry, fish and crop farms: daily operations, mortality, feed, inventory, production and harvests, sales, income and expenses, reports and alerts, for multiple farm sites and teams.
 
@@ -50,7 +50,7 @@ Local email (sign-up confirmations, password resets) is captured at http://127.0
 
 ## Documentation
 
-1. [Reference inspection of The Counsel](docs/01-reference-inspection.md), including weaknesses found and how FarmLedger avoids them
+1. [Reference inspection of The Counsel](docs/01-reference-inspection.md), including weaknesses found and how The Harvest avoids them
 2. [Architecture](docs/02-architecture.md)
 3. [Roles and permissions](docs/03-roles-permissions.md)
 4. [Database and record-keeping rules](docs/04-database.md)

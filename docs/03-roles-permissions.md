@@ -44,7 +44,7 @@ A manager sees money only if an owner grants `finance.view`, as the brief requir
 ## Inviting users
 
 1. Administration → Users → Invite user, then choose the email, role and sites.
-2. FarmLedger shows a one-time link. Share it by WhatsApp, SMS or email. The link works only for that address and expires after 7 days. Only a SHA-256 hash of the token is stored.
+2. The Harvest shows a one-time link. Share it by WhatsApp, SMS or email. The link works only for that address and expires after 7 days. Only a SHA-256 hash of the token is stored.
 3. The person signs up or signs in with that email and opens the link.
 
 Plan limits on sites and users are checked when inviting and when adding sites.
