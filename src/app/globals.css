@@ -1,0 +1,124 @@
+@import '@fontsource-variable/inter';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  FarmLedger palette: clean neutral greys and white, a near-black primary,
+  and one green brand colour for active states and links. Production types
+  keep one hue each, used only for small badges, icons and chart series:
+  poultry = amber, fish = blue, crop = green. No decorative gradients.
+*/
+@layer base {
+  :root {
+    --background: 220 14% 96%;
+    --surface: 0 0% 100%;
+    --foreground: 222 22% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 40%;
+    --border: 220 13% 91%;
+    --input: 220 13% 86%;
+    --ring: 152 56% 33%;
+
+    --primary: 222 22% 11%;
+    --primary-hi: 222 22% 11%;
+    --primary-foreground: 0 0% 100%;
+    --primary-soft: 220 14% 94%;
+
+    --brand: 152 56% 33%;
+    --brand-soft: 145 45% 94%;
+
+    --accent: 152 56% 33%;
+    --accent-foreground: 0 0% 100%;
+    --accent-soft: 145 45% 94%;
+
+    --soil: 28 34% 32%;
+    --soil-soft: 30 30% 92%;
+
+    --destructive: 2 62% 44%;
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 4 70% 95%;
+    --warning: 32 85% 40%;
+    --warning-soft: 40 90% 93%;
+    --success: 140 48% 30%;
+    --success-soft: 130 40% 93%;
+    --info: 200 55% 36%;
+    --info-soft: 200 55% 94%;
+
+    --poultry: 33 86% 41%;
+    --poultry-soft: 36 85% 92%;
+    --poultry-ink: 28 70% 26%;
+    --fish: 201 75% 40%;
+    --fish-soft: 200 65% 93%;
+    --fish-ink: 204 70% 24%;
+    --crop: 86 67% 34%;
+    --crop-soft: 86 50% 91%;
+    --crop-ink: 92 60% 20%;
+
+    /* Chart series validated with the dataviz palette checker (CVD + contrast).
+       Production types: amber / blue / green. Money: in = green, out = purple. */
+    --money-in: 146 46% 33%;
+    --money-out: 282 27% 49%;
+
+    --canopy: 220 14% 97%;
+    --canopy-deep: 222 22% 11%;
+    --canopy-line: 220 13% 91%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: 'tnum' 0;
+  }
+
+  h1, h2, h3 {
+    @apply font-sans font-semibold tracking-tight;
+  }
+
+  /* Figures in tables and stats line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  .print-full {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+  }
+}

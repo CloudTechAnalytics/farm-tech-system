@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, testing, production]
+  pull_request:
+
+jobs:
+  app:
+    name: Typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://example.invalid
+          VITE_SUPABASE_ANON_KEY: ci-placeholder
+      - name: No secrets in the bundle
+        run: |
+          if grep -rEl "service_role|SERVICE_ROLE|sb_secret_" dist/; then
+            echo "A privileged key or reference was found in the browser bundle." && exit 1
+          fi
+      - run: npm audit --omit=dev --audit-level=high
+
+  database:
+    name: Migrations on a clean database, RLS and workflow tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Start Supabase and apply every migration to an empty database
+        run: npx supabase start -x studio,imgproxy,edge-runtime,logflare,vector,realtime,postgres-meta,supavisor
+      - name: Generated types match the schema
+        run: |
+          npx supabase gen types typescript --local --schema public > /tmp/types.ts
+          diff -q /tmp/types.ts src/shared/types/database.generated.ts || (echo "Run npm run db:types and commit the result." && exit 1)
+      - run: npm run test:db
+      - name: End-to-end workflow
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test e2e/core-workflow.spec.ts
+        env:
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
