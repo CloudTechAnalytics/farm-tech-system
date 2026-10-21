@@ -4,12 +4,35 @@
 |---|---|---|---|
 | Unit | `npm test` | nothing | Conversions, mortality and lay rates, feed per head, biomass, yield, money rounding and allocation, low-stock rule, CSV escaping and formula injection |
 | Database | `npm run test:db` | `npx supabase start` | Tenant isolation, permissions, site scoping, ledger reconciliation, idempotency, concurrency, sales, finance, reports, alerts, organization deletion |
-| Browser | `npx playwright test e2e/core-workflow.spec.ts` | local Supabase | Sign-up through dashboard in a real browser, desktop and phone width |
+| Browser | `npx playwright test` | local Supabase | Core farm workflow (sign-up to dashboard, desktop and phone) and the business workflow (sidebar by farm type, order → delivery → invoice, PO → receipt → bill → payment, cash vs profit, assigned task with review) |
 | Build | `npm run build` | nothing | Typecheck and production bundle |
 
 CI (`.github/workflows/ci.yml`) runs all of them. The database job starts with an empty database, so it also proves the migrations apply cleanly, and it checks that the generated types match the schema.
 
-## Last local run (20 Oct 2026)
+## Last local run (21 Oct 2026, release 2)
+
+- Unit: 14 passed.
+- Database: 74 passed across 8 files: the release 1 suites plus `customers-sales`, `procurement`, `workforce-tasks`, `finance-integration` and `assets-health`. Each new file includes cross-organization and role checks.
+- Browser: `core-workflow` and `business-workflow` passed. The new screens were also checked at 390 px for horizontal overflow.
+- Build passed. `npm audit --omit=dev`: 0 vulnerabilities.
+
+### What the release 2 database tests prove
+
+| Rule | Test |
+|---|---|
+| Order fulfilment deducts once, oldest produce first; retries do not deduct again; voiding reopens the order | customers-sales |
+| Over-delivery and shortfalls are refused; live animals only from a batch of the right species | customers-sales |
+| Credit limits; invoice numbers without gaps from failed attempts | customers-sales |
+| Requests need an approver; goods received never exceed the order; no expense on receipt | procurement |
+| A receipt can be voided only while its stock is unused; duplicate supplier invoice numbers refused; bills cannot exceed the order value | procurement |
+| Payments cannot exceed the balance; reversed payments restore it | procurement |
+| Assigned tasks belong to the assignee; review needs a supervisor; sent-back work needs a note; repeats schedule the next task | workforce-tasks |
+| Cash surplus and accrual profit differ by exactly what is still owed either way | finance-integration |
+| Maintenance cost recorded once (paid now or via a bill, never both) and reversed only by voiding | assets-health |
+| Withdrawal periods block selling animals, eggs and harvests from treated batches and cycles | assets-health |
+| Water-quality, incident, booster and maintenance alerts appear and clear | assets-health |
+
+## Release 1 run (20 Oct 2026)
 
 - Unit: 14 passed.
 - Database: 46 passed across `tenancy`, `livestock-inventory` and `production-finance`, after `supabase db reset` from the migrations.

@@ -16,6 +16,11 @@
 | Bundle size | The core chunk is about 170 kB gzipped; record dialogs could be lazy-loaded too |
 | Tablet layout | Responsive breakpoints cover it, but it was only checked at desktop and phone widths |
 | Pagination | Lists show the latest 200 to 500 rows with date filters. Very large farms will need cursor pagination |
+| Stock valuation in profit | The Cash vs profit report is an operating estimate: it does not value stock on hand or depreciate equipment |
+| Partial bill matching | A supplier bill can link to one purchase order; three-way matching per line (order, receipt, bill) is not done |
+| Customer statements | Customer balances and invoices are on screen and in CSV; there is no printable statement or emailed invoice yet |
+| Payroll | Workers are records for assignment only; wages are recorded as labour expenses, as before |
+| Water-quality limits | Safe ranges are fixed for warm-water fish (catfish, tilapia); they are not yet configurable per species |
 | Accessibility audit | Labels, focus rings, keyboard dialogs and colour checks are in place; no full screen-reader audit yet |
 
 ## Deliberate behaviours to know about

@@ -111,7 +111,66 @@ const eggs = await one(`select id from production_record_balances where batch_id
 await rpc(u, 'record_sale', { p_key: k(), p_org: org, p_site: site, p_sale_date: day(5), p_customer_name: 'Bodija Market Ventures', p_lines: [{ line_type: 'produce', production_record_id: eggs.id, quantity: 15, unit_id: crate, unit_price: 4800 }], p_amount_received: 72000, p_payment_method: 'cash' })
 await rpc(u, 'record_finance_transaction', { p_key: k(), p_org: org, p_site: site, p_kind: 'expense', p_category: await cat('expense', 'labour'), p_amount: 85000, p_txn_date: day(7), p_description: 'Farm hands, weekly wages', p_payment_method: 'cash' })
 await rpc(u, 'record_finance_transaction', { p_key: k(), p_org: org, p_site: site, p_kind: 'expense', p_category: await cat('expense', 'veterinary'), p_amount: 18500, p_txn_date: day(12), p_description: 'Newcastle vaccine (Lasota)', p_payment_method: 'pos', p_batch: flock })
-void each
+
+// Customers, products, an overdue invoice and orders at different stages.
+const customer = async (name, category, phone, terms, limit) =>
+  (await as(u, `insert into public.customers (organization_id, name, category, phone, city, payment_terms_days, credit_limit) values ($1,$2,$3,$4,'Ibadan',$5,$6) returning id`, [org, name, category, phone, terms, limit]))[0].id
+const bodija = await customer('Bodija Market Ventures', 'wholesaler', '0803 555 0101', 14, 500000)
+const amala = await customer('Amala Spot Restaurant', 'hotel_restaurant', '0805 555 0122', 7, 150000)
+await customer('Mrs. Adeyemi', 'individual', '0816 555 0190', 0, null)
+const product = async (name, type, source, match, unitId, price) =>
+  (await as(u, `insert into public.products (organization_id, name, production_type, source_kind, match_name, unit_id, default_price) values ($1,$2,$3,$4,$5,$6,$7) returning id`, [org, name, type, source, match, unitId, price]))[0].id
+const eggCrate = await product('Eggs (crate of 30)', 'poultry', 'produce', 'Eggs', crate, 4800)
+const maize = await product('Maize grain', 'crop', 'produce', 'Maize', kg, 420)
+await product('Spent layers (live)', 'poultry', 'livestock', 'Chicken', each, 3500)
+await product('Poultry manure (bag)', 'general', 'other', null, each, 1500)
+await as(u, `insert into public.customer_prices (organization_id, customer_id, product_id, unit_price) values ($1,$2,$3,4600)`, [org, bodija, eggCrate])
+
+const oldEggs = await one(`select id from production_record_balances where batch_id = $1 order by record_date limit 1`, [flock])
+await rpc(u, 'record_sale', { p_key: k(), p_org: org, p_site: site, p_sale_date: day(20), p_customer: amala, p_lines: [{ line_type: 'produce', production_record_id: oldEggs.id, quantity: 8, unit_id: crate, unit_price: 4800 }], p_amount_received: 10000, p_payment_method: 'bank_transfer' })
+const big = await rpc(u, 'create_sales_order', { p_key: k(), p_org: org, p_site: site, p_customer: bodija, p_order_date: day(4), p_required_by: day(-3), p_lines: [{ product_id: eggCrate, quantity: 60 }, { product_id: maize, quantity: 1500 }] })
+const bigLines = (await pool.query(`select id, product_id from sales_order_lines where sales_order_id = $1`, [big.sales_order_id])).rows
+await rpc(u, 'fulfil_sales_order', { p_key: k(), p_order: big.sales_order_id, p_fulfil_date: day(1), p_lines: bigLines.map((l) => ({ order_line_id: l.id, quantity: l.product_id === eggCrate ? 40 : 1000 })), p_amount_received: 300000, p_payment_method: 'bank_transfer' })
+await rpc(u, 'create_sales_order', { p_key: k(), p_org: org, p_site: site, p_customer: amala, p_order_date: day(0), p_required_by: day(-2), p_lines: [{ product_id: eggCrate, quantity: 10 }] })
+
+// Suppliers: a feed order part received and part paid, plus a request waiting for approval.
+const supplier = async (name, category, terms) =>
+  (await as(u, `insert into public.suppliers (organization_id, name, category, phone, city, payment_terms_days) values ($1,$2,$3,'0802 555 0300','Ibadan',$4) returning id`, [org, name, category, terms]))[0].id
+const topFeeds = await supplier('Top Feeds Ltd', 'feed', 30)
+await supplier('Agro-Allied Inputs', 'agrochemical', 14)
+const pr = await rpc(u, 'create_purchase_request', { p_key: k(), p_org: org, p_site: site, p_reason: 'Layer mash for House A for the next month', p_needed_by: day(-5), p_lines: [{ item_id: layerMash, quantity: 60, unit_id: bag25, estimated_unit_cost: 11500 }] })
+await rpc(u, 'decide_purchase_request', { p_request: pr.purchase_request_id, p_decision: 'approved' })
+const po = await rpc(u, 'create_purchase_order', { p_key: k(), p_org: org, p_site: site, p_supplier: topFeeds, p_store: store, p_order_date: day(6), p_expected_date: day(2), p_request: pr.purchase_request_id, p_lines: [{ item_id: layerMash, quantity: 60, unit_id: bag25, unit_price: 11800 }] })
+const poLine = (await one(`select id from purchase_order_lines where purchase_order_id = $1`, [po.purchase_order_id])).id
+await rpc(u, 'receive_purchase_order', { p_key: k(), p_order: po.purchase_order_id, p_received_date: day(3), p_delivery_reference: 'TF-DN-2291', p_lines: [{ order_line_id: poLine, quantity_received: 40, quantity_rejected: 1, rejection_reason: 'Torn bag' }] })
+const bill = await rpc(u, 'record_supplier_bill', { p_key: k(), p_org: org, p_supplier: topFeeds, p_bill_number: 'TF-INV-10432', p_bill_date: day(3), p_amount: 472000, p_description: '40 bags layer mash', p_order: po.purchase_order_id })
+await rpc(u, 'pay_supplier_bill', { p_key: k(), p_bill: bill.supplier_bill_id, p_amount: 250000, p_payment_date: day(1), p_payment_method: 'bank_transfer', p_reference: 'TRF 88213' })
+await rpc(u, 'create_purchase_request', { p_key: k(), p_org: org, p_site: site, p_reason: 'NPK top-up for the north field', p_lines: [{ item_id: npk, quantity: 4, unit_id: bag25 }] })
+
+// Workers and tasks: one overdue, one waiting for review, one weekly.
+const worker = async (name, title, phone) => rpc(u, 'save_employee', { p_employee: null, p_org: org, p_full_name: name, p_site_ids: [site], p_job_title: title, p_phone: phone, p_start_date: day(400) })
+const musa = await worker('Musa Ibrahim', 'Pen attendant', '0803 555 0411')
+const ngozi = await worker('Ngozi Eze', 'Fish farm hand', '0806 555 0422')
+const taskWith = async (title, type, code, due, extra) => rpc(u, 'save_task', { p_task: null, p_org: org, p_site: site, p_production_type: type, p_category: await cat('activity', code), p_title: title, p_due_on: due, ...extra })
+await taskWith('Newcastle (Lasota) booster, House A', 'poultry', 'vaccination', day(2), { p_batch: flock, p_assigned_employee: musa, p_priority: 'high', p_requires_review: true })
+const pondCheck = await taskWith('Check pond water and inlet screens', 'fish', 'cleaning', day(0), { p_batch: fish, p_assigned_employee: ngozi, p_requires_review: true })
+await rpc(u, 'set_task_status', { p_task: pondCheck, p_status: 'done', p_note: 'Screens cleared, water clear' })
+await taskWith('Wash and disinfect drinkers', 'poultry', 'cleaning', day(-2), { p_assigned_employee: musa, p_repeat_every_days: 7 })
+await taskWith('Top-dress maize with urea', 'crop', 'fertilizer', day(-5), { p_crop_cycle: cycle })
+
+// Equipment with schedules, and health records: a booster due, a water test out of range, an open incident.
+const equipment = async (name, category, unitId) =>
+  (await as(u, `insert into public.assets (organization_id, site_id, name, category, production_unit_id, make, purchase_date) values ($1,$2,$3,$4,$5,'Mikano',$6) returning id`, [org, site, name, category, unitId, day(700)]))[0].id
+const generator = await equipment('Generator 20kVA', 'generator', null)
+const aerator = await equipment('Pond aerator', 'pump', pond)
+const plan = (assetId, title, every, due) => as(u, `insert into public.maintenance_plans (organization_id, site_id, asset_id, title, interval_days, next_due_on) values ($1,$2,$3,$4,$5,$6) returning id`, [org, site, assetId, title, every, due])
+const [genPlan] = await plan(generator, 'Oil and filter change', 90, day(95))
+await plan(aerator, 'Clean impeller and check bearings', 30, day(3))
+await rpc(u, 'record_maintenance', { p_key: k(), p_asset: generator, p_kind: 'service', p_performed_on: day(5), p_description: 'Oil, oil filter and air filter changed', p_plan: genPlan.id, p_cost: 38500, p_paid_now: true, p_payment_method: 'cash', p_performed_by: 'Sule Mechanics', p_downtime_hours: 2 })
+await rpc(u, 'record_health', { p_key: k(), p_org: org, p: { record_type: 'vaccination', site_id: site, record_date: day(20), title: 'Newcastle (Lasota), first dose', batch_id: flock, route: 'water', next_due_on: day(1), administered_by: 'Musa Ibrahim' } })
+await rpc(u, 'record_health', { p_key: k(), p_org: org, p: { record_type: 'inspection', site_id: site, record_date: day(2), title: 'Weekly biosecurity walk', production_type: 'general', outcome: 'needs_action', action_taken: 'Footbath at House A refilled' } })
+await rpc(u, 'record_health', { p_key: k(), p_org: org, p: { record_type: 'water_quality', site_id: site, record_date: day(0), title: 'Morning test', batch_id: fish, production_unit_id: pond, dissolved_oxygen_mg_l: 2.6, ph: 7.4, ammonia_mg_l: 0.3, water_temp_c: 29.5 } })
+await rpc(u, 'record_health', { p_key: k(), p_org: org, p: { record_type: 'incident', site_id: site, record_date: day(0), title: 'Fish gasping at the surface', batch_id: fish, severity: 'high', affected_count: 15, action_taken: 'Aerator restarted, feeding stopped for the day' } })
 
 console.log(`Demo farm ready. Sign in as ${EMAIL} / Harvest2026`)
 await pool.end()

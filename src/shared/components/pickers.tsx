@@ -9,6 +9,9 @@ import { inventoryService } from '@/features/inventory/services/inventory.servic
 import { PAYMENT_METHODS } from '@/features/finance/services/finance.service'
 import type { CategoryKind, Unit } from '@/features/settings/services/reference.service'
 import { memberName } from '@/features/settings/services/reference.service'
+import { customersService } from '@/features/customers/services/customers.service'
+import { productsService } from '@/features/sales/services/products.service'
+import { suppliersService } from '@/features/procurement/services/procurement.service'
 
 type SelectProps = Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'value'> & {
   value: string
@@ -42,7 +45,8 @@ export function useActiveBatches(siteId?: string, type?: LivestockType) {
   const { activeOrgId } = useAuth()
   return useQuery({
     queryKey: ['batches', activeOrgId, 'active', siteId ?? '', type ?? ''],
-    enabled: !!activeOrgId,
+    // '__none__' means "no site chosen yet": show nothing rather than query with it.
+    enabled: !!activeOrgId && siteId !== '__none__',
     queryFn: () => batchesService.listActive(activeOrgId!, siteId, type),
   })
 }
@@ -66,7 +70,7 @@ export function useOpenCropCycles(siteId?: string) {
   const { activeOrgId } = useAuth()
   return useQuery({
     queryKey: ['crops', activeOrgId, 'open', siteId ?? ''],
-    enabled: !!activeOrgId,
+    enabled: !!activeOrgId && siteId !== '__none__',
     queryFn: () => cropsService.list(activeOrgId!, { siteId, status: 'open' }),
   })
 }
@@ -192,4 +196,59 @@ export function PaymentMethodSelect(props: SelectProps) {
 export function useUnitByCode(code: string): Unit | undefined {
   const { data = [] } = useUnits()
   return data.find((u) => u.code === code && u.organization_id === null)
+}
+
+export function useCustomerOptions() {
+  const { activeOrgId } = useAuth()
+  return useQuery({ queryKey: ['customers', activeOrgId, 'options'], enabled: !!activeOrgId, queryFn: () => customersService.options(activeOrgId!) })
+}
+
+export function CustomerSelect(props: SelectProps) {
+  const { data = [], isLoading } = useCustomerOptions()
+  return (
+    <Base placeholder={isLoading ? 'Loading…' : data.length ? 'Choose a customer' : 'No customers yet'} {...props}>
+      {data.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.name}
+          {c.phone ? ` · ${c.phone}` : ''}
+        </option>
+      ))}
+    </Base>
+  )
+}
+
+export function useProducts(activeOnly = true) {
+  const { activeOrgId } = useAuth()
+  return useQuery({ queryKey: ['products', activeOrgId, activeOnly], enabled: !!activeOrgId, queryFn: () => productsService.list(activeOrgId!, { activeOnly }) })
+}
+
+export function ProductSelect(props: SelectProps) {
+  const { data = [], isLoading } = useProducts()
+  return (
+    <Base placeholder={isLoading ? 'Loading…' : data.length ? 'Choose a product' : 'No products yet'} {...props}>
+      {data.map((p) => (
+        <option key={p.id} value={p.id}>
+          {p.name}
+        </option>
+      ))}
+    </Base>
+  )
+}
+
+export function useSupplierOptions() {
+  const { activeOrgId } = useAuth()
+  return useQuery({ queryKey: ['suppliers', activeOrgId, 'options'], enabled: !!activeOrgId, queryFn: () => suppliersService.options(activeOrgId!) })
+}
+
+export function SupplierSelect(props: SelectProps) {
+  const { data = [], isLoading } = useSupplierOptions()
+  return (
+    <Base placeholder={isLoading ? 'Loading…' : data.length ? 'Choose a supplier' : 'No suppliers yet'} {...props}>
+      {data.map((s) => (
+        <option key={s.id} value={s.id}>
+          {s.name}
+        </option>
+      ))}
+    </Base>
+  )
 }

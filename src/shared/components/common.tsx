@@ -1,9 +1,10 @@
 import * as React from 'react'
-import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import { AlertTriangle, Loader2, RefreshCw, Search } from 'lucide-react'
 import { Button } from '@/shared/components/ui/button'
 import { Card } from '@/shared/components/ui/card'
 import { Skeleton } from '@/shared/components/ui/misc'
 import { Badge } from '@/shared/components/ui/badge'
+import { Input } from '@/shared/components/ui/input'
 import { cn } from '@/shared/lib/utils'
 import { friendlyError } from '@/shared/lib/errors'
 
@@ -252,4 +253,25 @@ export function DefinitionList({ items, className }: { items: { label: string; v
       ))}
     </dl>
   )
+}
+
+/** Search box for list toolbars. */
+export function SearchInput({ value, onChange, placeholder = 'Search', className }: { value: string; onChange: (value: string) => void; placeholder?: string; className?: string }) {
+  return (
+    <div className={cn('relative w-full sm:w-60', className)}>
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input type="search" aria-label={placeholder} placeholder={placeholder} className="h-9 pl-9" value={value} onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  )
+}
+
+/** Value that settles after the user stops typing. */
+export function useDebounced<T>(value: T, ms = 300): T {
+  const [v, setV] = React.useState(value)
+  React.useEffect(() => {
+    const t = setTimeout(() => setV(value), ms)
+    return () => clearTimeout(t)
+  }, [value, ms])
+  return v
 }

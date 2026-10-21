@@ -6,6 +6,7 @@ import { AcceptInvitePage, ForgotPasswordPage, ResetPasswordPage, SignInPage, Si
 import { SiteScopeProvider } from '@/shared/context/site-scope'
 import { QuickActionsProvider } from '@/features/operations/components/quick-actions'
 import { FullPageLoader, LoadingRows } from '@/shared/components/common'
+import type { PermissionKey } from '@/shared/lib/permissions'
 
 /** Each page is its own chunk so phones on slow networks only download what they open. */
 function lazyPage<K extends string>(load: () => Promise<Record<K, ComponentType<any>>>, name: K) {
@@ -25,6 +26,28 @@ const InventoryPage = lazyPage(() => import('@/features/inventory/pages/inventor
 const NewSalePage = lazyPage(() => import('@/features/sales/pages/sales-pages'), 'NewSalePage')
 const SaleDetailPage = lazyPage(() => import('@/features/sales/pages/sales-pages'), 'SaleDetailPage')
 const SalesPage = lazyPage(() => import('@/features/sales/pages/sales-pages'), 'SalesPage')
+const CustomersPage = lazyPage(() => import('@/features/customers/pages/customers-pages'), 'CustomersPage')
+const CustomerDetailPage = lazyPage(() => import('@/features/customers/pages/customers-pages'), 'CustomerDetailPage')
+const ProductsPage = lazyPage(() => import('@/features/sales/pages/products-page'), 'ProductsPage')
+const OrdersPage = lazyPage(() => import('@/features/sales/pages/orders-pages'), 'OrdersPage')
+const NewOrderPage = lazyPage(() => import('@/features/sales/pages/orders-pages'), 'NewOrderPage')
+const OrderDetailPage = lazyPage(() => import('@/features/sales/pages/orders-pages'), 'OrderDetailPage')
+const SuppliersPage = lazyPage(() => import('@/features/procurement/pages/suppliers-pages'), 'SuppliersPage')
+const SupplierDetailPage = lazyPage(() => import('@/features/procurement/pages/suppliers-pages'), 'SupplierDetailPage')
+const PurchaseRequestsPage = lazyPage(() => import('@/features/procurement/pages/purchasing-pages'), 'PurchaseRequestsPage')
+const PurchaseOrdersPage = lazyPage(() => import('@/features/procurement/pages/purchasing-pages'), 'PurchaseOrdersPage')
+const NewPurchaseOrderPage = lazyPage(() => import('@/features/procurement/pages/purchasing-pages'), 'NewPurchaseOrderPage')
+const PurchaseOrderDetailPage = lazyPage(() => import('@/features/procurement/pages/purchasing-pages'), 'PurchaseOrderDetailPage')
+const SupplierBillsPage = lazyPage(() => import('@/features/procurement/pages/bills-pages'), 'SupplierBillsPage')
+const SupplierBillDetailPage = lazyPage(() => import('@/features/procurement/pages/bills-pages'), 'SupplierBillDetailPage')
+const TasksPage = lazyPage(() => import('@/features/tasks/pages/tasks-pages'), 'TasksPage')
+const WorkersPage = lazyPage(() => import('@/features/tasks/pages/tasks-pages'), 'WorkersPage')
+const ReceivablesPage = lazyPage(() => import('@/features/finance/pages/position-pages'), 'ReceivablesPage')
+const PayablesPage = lazyPage(() => import('@/features/finance/pages/position-pages'), 'PayablesPage')
+const CashbookPage = lazyPage(() => import('@/features/finance/pages/position-pages'), 'CashbookPage')
+const AssetsPage = lazyPage(() => import('@/features/assets/pages/assets-pages'), 'AssetsPage')
+const AssetDetailPage = lazyPage(() => import('@/features/assets/pages/assets-pages'), 'AssetDetailPage')
+const HealthPage = lazyPage(() => import('@/features/health/pages/health-page'), 'HealthPage')
 const FinancePage = lazyPage(() => import('@/features/finance/pages/finance-page'), 'FinancePage')
 const ReportsPage = lazyPage(() => import('@/features/reports/pages/reports-page'), 'ReportsPage')
 const SiteDetailPage = lazyPage(() => import('@/features/sites/pages/sites-pages'), 'SiteDetailPage')
@@ -63,6 +86,9 @@ function RouteError() {
   )
 }
 
+// Mirrors public.can_see_procurement.
+const PROCUREMENT_VIEW: PermissionKey[] = ['suppliers.manage', 'procurement.request', 'procurement.approve', 'inventory.manage', 'finance.view']
+
 const ops = (el: ReactNode) => <RequirePermission permission="operations.view">{el}</RequirePermission>
 
 export const router = createBrowserRouter([
@@ -97,12 +123,34 @@ export const router = createBrowserRouter([
                   { path: '/fish/:id', element: ops(<BatchDetailPage type="fish" />) },
                   { path: '/crops', element: ops(<CropsPage />) },
                   { path: '/crops/:id', element: ops(<CropDetailPage />) },
+                  { path: '/tasks', element: ops(<TasksPage />) },
+                  { path: '/workers', element: <RequirePermission permission={['workforce.manage', 'tasks.manage']}><WorkersPage /></RequirePermission> },
+                  { path: '/health', element: <RequirePermission permission="health.view"><HealthPage /></RequirePermission> },
+                  { path: '/equipment', element: <RequirePermission permission="assets.view"><AssetsPage /></RequirePermission> },
+                  { path: '/equipment/:id', element: <RequirePermission permission="assets.view"><AssetDetailPage /></RequirePermission> },
                   { path: '/production', element: ops(<ProductionPage />) },
                   { path: '/inventory', element: <RequirePermission permission="inventory.view"><InventoryPage /></RequirePermission> },
                   { path: '/sales', element: <RequirePermission permission={['sales.record', 'finance.view']}><SalesPage /></RequirePermission> },
                   { path: '/sales/new', element: <RequirePermission permission="sales.record"><NewSalePage /></RequirePermission> },
                   { path: '/sales/:id', element: <RequirePermission permission={['sales.record', 'finance.view']}><SaleDetailPage /></RequirePermission> },
+                  { path: '/suppliers', element: <RequirePermission permission={PROCUREMENT_VIEW}><SuppliersPage /></RequirePermission> },
+                  { path: '/suppliers/:id', element: <RequirePermission permission={PROCUREMENT_VIEW}><SupplierDetailPage /></RequirePermission> },
+                  { path: '/purchase-requests', element: <RequirePermission permission={['procurement.request', 'procurement.approve']}><PurchaseRequestsPage /></RequirePermission> },
+                  { path: '/purchase-orders', element: <RequirePermission permission={PROCUREMENT_VIEW}><PurchaseOrdersPage /></RequirePermission> },
+                  { path: '/purchase-orders/new', element: <RequirePermission permission="procurement.approve"><NewPurchaseOrderPage /></RequirePermission> },
+                  { path: '/purchase-orders/:id', element: <RequirePermission permission={PROCUREMENT_VIEW}><PurchaseOrderDetailPage /></RequirePermission> },
+                  { path: '/bills', element: <RequirePermission permission={['finance.view', 'suppliers.manage', 'procurement.approve']}><SupplierBillsPage /></RequirePermission> },
+                  { path: '/bills/:id', element: <RequirePermission permission={['finance.view', 'suppliers.manage', 'procurement.approve']}><SupplierBillDetailPage /></RequirePermission> },
+                  { path: '/customers', element: <RequirePermission permission={['customers.manage', 'sales.record', 'finance.view']}><CustomersPage /></RequirePermission> },
+                  { path: '/customers/:id', element: <RequirePermission permission={['customers.manage', 'sales.record', 'finance.view']}><CustomerDetailPage /></RequirePermission> },
+                  { path: '/products', element: <RequirePermission permission={['products.manage', 'sales.record']}><ProductsPage /></RequirePermission> },
+                  { path: '/orders', element: <RequirePermission permission={['sales.record', 'finance.view']}><OrdersPage /></RequirePermission> },
+                  { path: '/orders/new', element: <RequirePermission permission="sales.record"><NewOrderPage /></RequirePermission> },
+                  { path: '/orders/:id', element: <RequirePermission permission={['sales.record', 'finance.view']}><OrderDetailPage /></RequirePermission> },
                   { path: '/finance', element: <RequirePermission permission="finance.view"><FinancePage /></RequirePermission> },
+                  { path: '/receivables', element: <RequirePermission permission="finance.view"><ReceivablesPage /></RequirePermission> },
+                  { path: '/payables', element: <RequirePermission permission="finance.view"><PayablesPage /></RequirePermission> },
+                  { path: '/cashbook', element: <RequirePermission permission="finance.view"><CashbookPage /></RequirePermission> },
                   { path: '/reports', element: <RequirePermission permission={['reports.view', 'reports.financial']}><ReportsPage /></RequirePermission> },
                   { path: '/sites', element: <SitesPage /> },
                   { path: '/sites/:id', element: <SiteDetailPage /> },

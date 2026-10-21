@@ -59,7 +59,7 @@ export function AlertsPage() {
                         <Badge variant="outline">{ALERT_KIND_LABEL[a.kind]}</Badge>
                       </div>
                       <p className="mt-0.5 text-sm text-muted-foreground">
-                        {a.detail} · {a.site_name} · {formatDate(a.alert_date)}
+                        {a.detail} · {a.site_name ?? 'Organization-wide'} · {formatDate(a.alert_date)}
                       </p>
                     </div>
                     {href ? (

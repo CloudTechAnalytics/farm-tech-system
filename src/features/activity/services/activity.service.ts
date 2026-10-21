@@ -113,39 +113,4 @@ export const activityService = {
     if (error) throw error
   },
 
-  async planned(orgId: string, f: { siteId?: string; status?: string }) {
-    let q = supabase
-      .from('planned_activities')
-      .select('*, category:categories(name), site:farm_sites(name), batch:batches(code), crop_cycle:crop_cycles(code)')
-      .eq('organization_id', orgId)
-      .order('due_on')
-    if (f.siteId) q = q.eq('site_id', f.siteId)
-    if (f.status) q = q.eq('status', f.status)
-    const { data, error } = await q
-    if (error) throw error
-    return data ?? []
-  },
-
-  async createPlanned(orgId: string, v: { site_id: string; production_type: string; category_id: string; title: string; due_on: string; batch_id?: string; crop_cycle_id?: string; notes?: string }) {
-    const { error } = await supabase.from('planned_activities').insert({
-      organization_id: orgId,
-      site_id: v.site_id,
-      production_type: v.production_type,
-      category_id: v.category_id,
-      title: v.title.trim(),
-      due_on: v.due_on,
-      batch_id: v.batch_id || null,
-      crop_cycle_id: v.crop_cycle_id || null,
-      notes: blankToNull(v.notes),
-    })
-    if (error) throw error
-  },
-
-  async setPlannedStatus(id: string, status: 'planned' | 'done' | 'cancelled') {
-    const { error } = await supabase
-      .from('planned_activities')
-      .update({ status, completed_at: status === 'done' ? new Date().toISOString() : null })
-      .eq('id', id)
-    if (error) throw error
-  },
 }

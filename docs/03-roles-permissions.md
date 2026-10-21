@@ -31,8 +31,26 @@ Each organization gets its own copy of these roles when it is created. An owner 
 | Operational reports (`reports.view`) | ✓ | ✓ | ✓ | |
 | Financial reports (`reports.financial`) | ✓ | | ✓ | |
 | Export CSV (`reports.export`) | ✓ | ✓ | ✓ | |
+| Manage customers, credit limits, customer prices (`customers.manage`) | ✓ | ✓ | ✓ | |
+| Manage products and selling prices (`products.manage`) | ✓ | ✓ | | |
+| Manage suppliers (`suppliers.manage`) | ✓ | ✓ | ✓ | |
+| Raise purchase requests (`procurement.request`) | ✓ | ✓ | | |
+| Approve requests, issue purchase orders (`procurement.approve`) | ✓ | | | |
+| Manage worker records and site assignments (`workforce.manage`) | ✓ | ✓ | | |
+| Assign tasks, set priority, review work (`tasks.manage`) | ✓ | ✓ | | |
+| View equipment and service history (`assets.view`) | ✓ | ✓ | ✓ | ✓ |
+| Add equipment, schedules, record repairs (`assets.manage`) | ✓ | ✓ | | |
+| View health records (`health.view`) | ✓ | ✓ | | |
+| Record treatments, vaccinations, incidents, water tests (`health.record`) | ✓ | ✓ | | |
 
 A manager sees money only if an owner grants `finance.view`, as the brief requires. A manager with `sales.record` but without `finance.view` can record and look up sales, but cannot see the income and expense ledger.
+
+Release 2 notes:
+
+- Receiving goods on a purchase order needs `inventory.manage`; recording and paying supplier bills needs `finance.record`; voiding a bill needs `finance.reverse`.
+- Workers see colleagues' names for task assignment, but phone numbers and notes only with `workforce.manage` or `tasks.manage` (or their own record).
+- Health records are sensitive and are hidden from workers by default. Grant `health.view` or `health.record` per organization if workers record treatments.
+- New permissions were added to existing organizations' roles by template, so farms created before release 2 get the same defaults.
 
 ## Rules that cannot be changed
 

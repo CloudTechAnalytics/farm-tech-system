@@ -5,6 +5,7 @@ import { Bell, Building2, Check, ChevronsUpDown, ClipboardList, LayoutDashboard,
 import { NAV, PLATFORM_NAV, type NavItem } from '@/app/navigation'
 import { useAuth } from '@/features/auth/context/auth-provider'
 import { useSiteScope } from '@/shared/context/site-scope'
+import { useSites } from '@/shared/hooks/use-reference-data'
 import { BrandLockup } from '@/shared/components/brand'
 import { Button } from '@/shared/components/ui/button'
 import { Select } from '@/shared/components/ui/input'
@@ -23,7 +24,11 @@ import { cn } from '@/shared/lib/utils'
 
 function useVisibleNav() {
   const { hasAny, isPlatformAdmin } = useAuth()
-  const groups = NAV.map((g) => ({ ...g, items: g.items.filter((i) => !i.permission || hasAny(i.permission)) })).filter((g) => g.items.length)
+  const { data: sites } = useSites()
+  // Production modules follow what the farm's sites run; everything shows until sites load.
+  const runs = (t: NonNullable<NavItem['farmType']>) =>
+    !sites || sites.some((s) => (t === 'poultry' ? s.has_poultry : t === 'fish' ? s.has_fish : s.has_crops))
+  const groups = NAV.map((g) => ({ ...g, items: g.items.filter((i) => (!i.permission || hasAny(i.permission)) && (!i.farmType || runs(i.farmType))) })).filter((g) => g.items.length)
   return { groups, platform: isPlatformAdmin ? PLATFORM_NAV : null }
 }
 

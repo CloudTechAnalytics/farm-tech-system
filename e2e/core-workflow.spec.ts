@@ -113,12 +113,13 @@ test('owner records a week of farm work end to end', async ({ page }) => {
   await page.getByLabel('From record').selectOption({ index: 1 })
   await page.getByLabel('Quantity').fill('10')
   await page.getByLabel(/Price per unit/).fill('4500')
-  await page.getByLabel('Customer', { exact: true }).fill('Mama Nkechi')
+  await page.getByLabel('Walk-in name').fill('Mama Nkechi')
   await page.getByRole('checkbox', { name: 'Paid in full now' }).uncheck()
   await page.getByLabel('Amount received now').fill('30000')
   await shot(page, '05-new-sale')
   await page.getByRole('button', { name: 'Save sale' }).click()
-  await expect(page.getByRole('heading', { name: /Sale to Mama Nkechi/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Invoice INV-00001/ })).toBeVisible()
+  await expect(page.getByText('Mama Nkechi').first()).toBeVisible()
   await expect(page.getByText('Part paid')).toBeVisible()
 
   // Trying to sell more eggs than remain is refused before anything is saved.

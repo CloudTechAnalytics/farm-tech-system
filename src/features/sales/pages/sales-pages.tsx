@@ -1,10 +1,10 @@
 import * as React from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Plus, Printer, ShoppingBasket, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, Plus, Printer, ShoppingBasket, Trash2 } from 'lucide-react'
 import { useAuth, useCurrency } from '@/features/auth/context/auth-provider'
 import { useSiteScope } from '@/shared/context/site-scope'
 import { salesService, paymentStatus, type SaleLineInput, type SaleSummary } from '@/features/sales/services/sales.service'
@@ -15,10 +15,11 @@ import { Badge } from '@/shared/components/ui/badge'
 import { Button } from '@/shared/components/ui/button'
 import { Checkbox, Input, Select, Textarea } from '@/shared/components/ui/input'
 import { Table, TableWrap, Td, Th, Tr } from '@/shared/components/ui/misc'
-import { DefinitionList, EmptyState, ErrorState, Field, FormError, LoadingRows, Notice, PageHeader, QueryState, StatCard } from '@/shared/components/common'
+import { DefinitionList, EmptyState, ErrorState, Field, FormError, LoadingRows, Notice, PageHeader, QueryState, SearchInput, StatCard, useDebounced } from '@/shared/components/common'
 import { FormDialog, FieldRow } from '@/shared/components/form-dialog'
 import { ReasonDialog } from '@/shared/components/reason-dialog'
-import { PaymentMethodSelect, SiteSelect, UnitSelect, useActiveBatches } from '@/shared/components/pickers'
+import { CustomerSelect, PaymentMethodSelect, SiteSelect, UnitSelect, useActiveBatches, useCustomerOptions } from '@/shared/components/pickers'
+import { downloadCsv, toCsv } from '@/shared/lib/csv'
 import { PeriodFilter, usePeriod } from '@/shared/components/period-filter'
 import { useRecord } from '@/shared/hooks/use-record'
 import { useUnits } from '@/shared/hooks/use-reference-data'
@@ -39,53 +40,97 @@ export function SalesPage() {
   const { siteId } = useSiteScope()
   const navigate = useNavigate()
   const [period, setPeriod] = usePeriod('30d')
-  const [outstanding, setOutstanding] = React.useState(false)
+  const [outstanding, setOutstanding] = React.useState<'' | 'owed' | 'overdue'>('')
+  const [search, setSearch] = React.useState('')
+  const debounced = useDebounced(search)
   const query = useQuery({
-    queryKey: ['sales', activeOrgId, siteId, period, outstanding],
+    queryKey: ['sales', activeOrgId, siteId, period, outstanding, debounced],
     enabled: !!activeOrgId,
-    queryFn: () => salesService.list(activeOrgId!, { siteId: siteId || undefined, from: outstanding ? undefined : period.from, to: outstanding ? undefined : period.to, outstandingOnly: outstanding }),
+    queryFn: () =>
+      salesService.list(activeOrgId!, {
+        siteId: siteId || undefined,
+        // Money still owed is shown whatever the invoice date.
+        from: outstanding ? undefined : period.from,
+        to: outstanding ? undefined : period.to,
+        outstandingOnly: outstanding === 'owed',
+        overdueOnly: outstanding === 'overdue',
+        search: debounced || undefined,
+      }),
   })
   const rows = query.data ?? []
   const posted = rows.filter((s) => s.status === 'posted')
   const total = posted.reduce((s, x) => s + x.total_amount, 0)
   const received = posted.reduce((s, x) => s + x.amount_received, 0)
+  const overdue = posted.filter((x) => x.is_overdue).reduce((s, x) => s + x.amount_outstanding, 0)
+  const exportCsv = () =>
+    downloadCsv(
+      'invoices',
+      toCsv(rows, [
+        { header: 'Invoice', value: (s) => s.invoice_number },
+        { header: 'Date', value: (s) => s.sale_date },
+        { header: 'Due', value: (s) => s.due_date },
+        { header: 'Customer', value: (s) => s.customer_display_name },
+        { header: 'Phone', value: (s) => s.customer_phone },
+        { header: 'Order', value: (s) => s.order_number },
+        { header: 'Site', value: (s) => s.site_name },
+        { header: 'Total', value: (s) => s.total_amount },
+        { header: 'Received', value: (s) => s.amount_received },
+        { header: 'Owed', value: (s) => s.amount_outstanding },
+        { header: 'Status', value: (s) => paymentStatus(s).label },
+      ]),
+    )
   return (
     <div>
       <PageHeader
-        title="Sales"
-        description="Eggs, harvests and live birds or fish sold. Selling reduces what is available, so nothing can be sold twice."
+        title="Invoices"
+        description="Every sale is an invoice. Selling reduces what is available, so nothing can be sold twice; only money received counts as income."
         actions={
-          has('sales.record') ? (
-            <Button asChild>
-              <Link to="/sales/new">
-                <Plus /> Record sale
-              </Link>
-            </Button>
-          ) : null
+          <>
+            {has('reports.export') ? (
+              <Button variant="outline" onClick={exportCsv} disabled={!rows.length}>
+                <Download /> Export CSV
+              </Button>
+            ) : null}
+            {has('sales.record') ? (
+              <Button asChild>
+                <Link to="/sales/new">
+                  <Plus /> Record sale
+                </Link>
+              </Button>
+            ) : null}
+          </>
         }
       />
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <SearchInput value={search} onChange={setSearch} placeholder="Search invoice, customer, phone" />
+        <div className="w-44">
+          <Select aria-label="Payment" className="h-9" value={outstanding} onChange={(e) => setOutstanding(e.target.value as typeof outstanding)}>
+            <option value="">All invoices</option>
+            <option value="owed">Money still owed</option>
+            <option value="overdue">Overdue</option>
+          </Select>
+        </div>
         {!outstanding ? <PeriodFilter value={period} onChange={setPeriod} /> : null}
-        <Checkbox label="Only sales with money still owed" checked={outstanding} onChange={(e) => setOutstanding(e.target.checked)} />
       </div>
       {rows.length ? (
-        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <StatCard tone="money" label="Sales value" value={formatMoney(total, currency)} hint={`${posted.length} sale${posted.length === 1 ? '' : 's'}`} />
+        <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard tone="money" label="Invoiced" value={formatMoney(total, currency)} hint={`${posted.length} invoice${posted.length === 1 ? '' : 's'}`} />
           <StatCard tone="money" label="Received" value={formatMoney(received, currency)} />
           <StatCard tone="plain" label="Still owed by customers" value={formatMoney(roundMoney(total - received), currency)} hint="Not cash until it is paid" />
+          <StatCard tone="plain" label="Overdue" value={formatMoney(overdue, currency)} hint="Past the due date" />
         </div>
       ) : null}
       <Card>
         <QueryState
           query={query}
-          empty={<EmptyState icon={ShoppingBasket} title="No sales in this period" action={has('sales.record') ? <Button asChild><Link to="/sales/new">Record a sale</Link></Button> : undefined} />}
+          empty={<EmptyState icon={ShoppingBasket} title={debounced || outstanding ? 'No invoices match' : 'No sales in this period'} action={has('sales.record') ? <Button asChild><Link to="/sales/new">Record a sale</Link></Button> : undefined} />}
         >
           {(list) => (
             <TableWrap>
               <Table>
                 <thead>
                   <tr>
-                    <Th>Date</Th>
+                    <Th>Invoice</Th>
                     <Th>Customer</Th>
                     <Th>Site</Th>
                     <Th align="right">Total</Th>
@@ -100,14 +145,16 @@ export function SalesPage() {
                     return (
                       <Tr key={s.id} className={cn('cursor-pointer', s.status === 'voided' && 'text-muted-foreground')} onClick={() => navigate(`/sales/${s.id}`)}>
                         <Td className="whitespace-nowrap">
-                          <Link to={`/sales/${s.id}`} className="hover:underline" onClick={(e) => e.stopPropagation()}>
-                            {formatDate(s.sale_date)}
+                          <Link to={`/sales/${s.id}`} className="whitespace-nowrap font-medium hover:underline" onClick={(e) => e.stopPropagation()}>
+                            {s.invoice_number}
                           </Link>
+                          <div className="text-xs text-muted-foreground">{formatDate(s.sale_date)}</div>
                         </Td>
                         <Td>
-                          {s.customer_name ?? 'Walk-in customer'}
+                          {s.customer_display_name ?? 'Walk-in customer'}
                           <div className="text-xs text-muted-foreground">
                             {s.line_count} item{s.line_count === 1 ? '' : 's'}
+                            {s.due_date && s.amount_outstanding > 0 ? ` · due ${formatDate(s.due_date, 'd MMM')}` : ''}
                           </div>
                         </Td>
                         <Td>{s.site_name}</Td>
@@ -164,11 +211,16 @@ export function NewSalePage() {
     if (!site && scopeSite) setSite(scopeSite)
   }, [scopeSite, site])
   const [date, setDate] = React.useState(todayISO())
+  const [params] = useSearchParams()
+  const [customerId, setCustomerId] = React.useState(params.get('customer') ?? '')
+  const { data: customers = [] } = useCustomerOptions()
+  const selectedCustomer = customers.find((c) => c.id === customerId)
   const [customer, setCustomer] = React.useState('')
   const [phone, setPhone] = React.useState('')
+  const [dueDate, setDueDate] = React.useState('')
   const [lines, setLines] = React.useState<DraftLine[]>([newLine()])
   const [received, setReceived] = React.useState('')
-  const [paidInFull, setPaidInFull] = React.useState(true)
+  const [paidInFull, setPaidInFull] = React.useState(!params.get('customer'))
   const [method, setMethod] = React.useState('cash')
   const [reference, setReference] = React.useState('')
   const [notes, setNotes] = React.useState('')
@@ -224,6 +276,7 @@ export function NewSalePage() {
     }
     if (receivedAmount > total) return setError('Amount received cannot be more than the total.')
     if (receivedAmount > 0 && !method) return setError('Choose how the money was received.')
+    if (dueDate && dueDate < date) return setError('The due date cannot be before the sale date.')
     const payload: SaleLineInput[] = filled.map((l) => ({
       line_type: l.line_type,
       production_record_id: l.line_type === 'produce' ? l.source : undefined,
@@ -236,10 +289,10 @@ export function NewSalePage() {
     }))
     setPending(true)
     try {
-      const r = await salesService.record(key, activeOrgId!, { site_id: site, date, lines: payload, amount_received: receivedAmount, payment_method: method, customer_name: customer, customer_phone: phone, reference, notes })
+      const r = await salesService.record(key, activeOrgId!, { site_id: site, date, lines: payload, amount_received: receivedAmount, payment_method: method, customer_id: customerId, customer_name: customerId ? undefined : customer, customer_phone: customerId ? undefined : phone, due_date: receivedAmount < total ? dueDate : undefined, reference, notes })
       renew()
       await invalidateRecords(qc)
-      toast.success(`Sale of ${formatMoney(r.total, currency)} recorded`)
+      toast.success(`Invoice ${r.invoice_number} for ${formatMoney(r.total, currency)} recorded`)
       navigate(`/sales/${r.sale_id}`, { replace: true })
     } catch (err) {
       setError(friendlyError(err))
@@ -263,12 +316,23 @@ export function NewSalePage() {
             <Field label="Sale date" htmlFor="ns-date" required>
               <Input id="ns-date" type="date" max={todayISO()} value={date} onChange={(e) => setDate(e.target.value)} />
             </Field>
-            <Field label="Customer" htmlFor="ns-cust">
-              <Input id="ns-cust" maxLength={120} value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Walk-in" />
+            <Field label="Customer" htmlFor="ns-customer" hint={selectedCustomer?.credit_limit != null ? `Credit limit ${formatMoney(selectedCustomer.credit_limit, currency)}` : undefined}>
+              <CustomerSelect id="ns-customer" placeholder="Walk-in customer" value={customerId} onChange={setCustomerId} />
             </Field>
-            <Field label="Customer phone" htmlFor="ns-phone">
-              <Input id="ns-phone" type="tel" maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
-            </Field>
+            {customerId ? (
+              <Field label="Due date" htmlFor="ns-due" hint={`Default: ${selectedCustomer?.payment_terms_days ?? 0} days after the sale`}>
+                <Input id="ns-due" type="date" min={date} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+              </Field>
+            ) : (
+              <>
+                <Field label="Walk-in name" htmlFor="ns-cust">
+                  <Input id="ns-cust" maxLength={120} value={customer} onChange={(e) => setCustomer(e.target.value)} placeholder="Optional" />
+                </Field>
+                <Field label="Phone" htmlFor="ns-phone">
+                  <Input id="ns-phone" type="tel" maxLength={40} value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </Field>
+              </>
+            )}
           </div>
         </Card>
 
@@ -461,11 +525,31 @@ function SaleDetail({ sale }: { sale: SaleSummary }) {
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-2">
-            Sale to {sale.customer_name ?? 'walk-in customer'}
+            Invoice {sale.invoice_number}
             <Badge variant={st.variant}>{st.label}</Badge>
           </span>
         }
-        description={`${formatDate(sale.sale_date)} · ${sale.site_name}`}
+        description={
+          <>
+            {sale.customer_id ? (
+              <Link to={`/customers/${sale.customer_id}`} className="hover:underline">
+                {sale.customer_display_name}
+              </Link>
+            ) : (
+              sale.customer_display_name ?? 'Walk-in customer'
+            )}
+            {` · ${formatDate(sale.sale_date)} · ${sale.site_name}`}
+            {sale.due_date ? ` · due ${formatDate(sale.due_date)}` : ''}
+            {sale.sales_order_id ? (
+              <>
+                {' · order '}
+                <Link to={`/orders/${sale.sales_order_id}`} className="hover:underline">
+                  {sale.order_number}
+                </Link>
+              </>
+            ) : null}
+          </>
+        }
         actions={
           <>
             <AttachmentsButton entityType="sale" entityId={sale.id} siteId={sale.site_id} />
@@ -481,6 +565,7 @@ function SaleDetail({ sale }: { sale: SaleSummary }) {
           </>
         }
       />
+      {sale.is_overdue ? <Notice tone="warning" className="mb-4">This invoice is overdue: it was due on {formatDate(sale.due_date)}.</Notice> : null}
       {sale.status === 'voided' ? <Notice tone="warning" className="mb-4">Voided: {sale.void_reason}. Quantities were returned and income was reversed.</Notice> : null}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <StatCard tone="money" label="Total" value={formatMoney(sale.total_amount, currency)} />

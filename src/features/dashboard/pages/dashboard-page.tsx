@@ -280,7 +280,7 @@ export function DashboardPage() {
                   <div className="min-w-0 text-sm">
                     <p className="font-medium">{a.title}</p>
                     <p className="text-muted-foreground">
-                      {ALERT_KIND_LABEL[a.kind]} · {a.site_name} · {a.detail}
+                      {ALERT_KIND_LABEL[a.kind]} · {a.site_name ?? 'Organization-wide'} · {a.detail}
                     </p>
                   </div>
                 </li>

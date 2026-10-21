@@ -102,7 +102,8 @@ export function DropdownMenuSeparator() {
 
 // ---- Table ----------------------------------------------------------------
 export function TableWrap({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('w-full overflow-x-auto', className)} {...props} />
+  // relative: screen-reader-only labels in cells stay inside the scroll area on phones
+  return <div className={cn('relative w-full overflow-x-auto', className)} {...props} />
 }
 
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {

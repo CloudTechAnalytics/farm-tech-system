@@ -3,10 +3,30 @@ import type { Database } from '@/shared/types/database.generated'
 
 export interface Alert {
   alert_key: string
-  kind: 'low_stock' | 'high_mortality' | 'high_rejection' | 'missing_records' | 'overdue_activity' | 'upcoming_activity' | 'upcoming_harvest'
+  kind:
+    | 'low_stock'
+    | 'high_mortality'
+    | 'high_rejection'
+    | 'missing_records'
+    | 'overdue_activity'
+    | 'upcoming_activity'
+    | 'upcoming_harvest'
+    | 'task_review'
+    | 'overdue_invoice'
+    | 'overdue_bill'
+    | 'request_awaiting_approval'
+    | 'late_delivery'
+    | 'maintenance_due'
+    | 'maintenance_overdue'
+    | 'equipment_down'
+    | 'vaccination_due'
+    | 'withdrawal_active'
+    | 'health_incident'
+    | 'water_quality'
   severity: 'critical' | 'warning' | 'info'
-  site_id: string
-  site_name: string
+  /** Null for organization-wide items such as some supplier bills. */
+  site_id: string | null
+  site_name: string | null
   entity_type: string
   entity_id: string
   title: string
@@ -22,6 +42,18 @@ export const ALERT_KIND_LABEL: Record<Alert['kind'], string> = {
   overdue_activity: 'Overdue task',
   upcoming_activity: 'Upcoming task',
   upcoming_harvest: 'Harvest',
+  task_review: 'Needs review',
+  overdue_invoice: 'Customer owes',
+  overdue_bill: 'Bill overdue',
+  request_awaiting_approval: 'Approval',
+  late_delivery: 'Late delivery',
+  maintenance_due: 'Maintenance',
+  maintenance_overdue: 'Maintenance',
+  equipment_down: 'Equipment',
+  vaccination_due: 'Vaccination',
+  withdrawal_active: 'Withdrawal',
+  health_incident: 'Health',
+  water_quality: 'Water quality',
 }
 
 const SEVERITY_ORDER = { critical: 0, warning: 1, info: 2 } as const
@@ -40,7 +72,19 @@ export function alertLink(a: Alert, batchTypes: Map<string, 'poultry' | 'fish'>)
     case 'production_record':
       return `/production`
     case 'planned_activity':
-      return `/log?tab=planned`
+      return '/tasks'
+    case 'sale':
+      return `/sales/${a.entity_id}`
+    case 'supplier_bill':
+      return `/bills/${a.entity_id}`
+    case 'purchase_request':
+      return '/purchase-requests'
+    case 'purchase_order':
+      return `/purchase-orders/${a.entity_id}`
+    case 'asset':
+      return `/equipment/${a.entity_id}`
+    case 'health_record':
+      return a.kind === 'water_quality' ? '/health?tab=water' : '/health'
     default:
       return null
   }

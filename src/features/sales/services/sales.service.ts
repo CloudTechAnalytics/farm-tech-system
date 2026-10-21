@@ -7,8 +7,15 @@ export interface SaleSummary {
   site_id: string
   site_name: string
   sale_date: string
+  invoice_number: string
+  customer_id: string | null
   customer_name: string | null
+  customer_display_name: string | null
   customer_phone: string | null
+  due_date: string | null
+  sales_order_id: string | null
+  order_number: string | null
+  is_overdue: boolean
   currency: string
   notes: string | null
   status: 'posted' | 'voided'
@@ -45,9 +52,10 @@ export interface SaleLineInput {
   weight_kg?: number | null
 }
 
-export function paymentStatus(s: Pick<SaleSummary, 'status' | 'total_amount' | 'amount_received'>): { label: string; variant: 'success' | 'warning' | 'danger' | 'neutral' } {
+export function paymentStatus(s: Pick<SaleSummary, 'status' | 'total_amount' | 'amount_received'> & { is_overdue?: boolean }): { label: string; variant: 'success' | 'warning' | 'danger' | 'neutral' } {
   if (s.status === 'voided') return { label: 'Voided', variant: 'neutral' }
   if (s.amount_received >= s.total_amount) return { label: 'Paid', variant: 'success' }
+  if (s.is_overdue) return { label: 'Overdue', variant: 'danger' }
   if (s.amount_received > 0) return { label: 'Part paid', variant: 'warning' }
   return { label: 'Unpaid', variant: 'danger' }
 }
@@ -55,12 +63,18 @@ export function paymentStatus(s: Pick<SaleSummary, 'status' | 'total_amount' | '
 const n = (v: unknown) => Number(v ?? 0)
 
 export const salesService = {
-  async list(orgId: string, f: { siteId?: string; from?: string; to?: string; outstandingOnly?: boolean }): Promise<SaleSummary[]> {
+  async list(orgId: string, f: { siteId?: string; from?: string; to?: string; outstandingOnly?: boolean; overdueOnly?: boolean; customerId?: string; search?: string }): Promise<SaleSummary[]> {
     let q = supabase.from('sale_summaries').select('*').eq('organization_id', orgId).order('sale_date', { ascending: false }).order('created_at', { ascending: false }).limit(500)
     if (f.siteId) q = q.eq('site_id', f.siteId)
     if (f.from) q = q.gte('sale_date', f.from)
     if (f.to) q = q.lte('sale_date', f.to)
     if (f.outstandingOnly) q = q.gt('amount_outstanding', 0)
+    if (f.overdueOnly) q = q.eq('is_overdue', true)
+    if (f.customerId) q = q.eq('customer_id', f.customerId)
+    if (f.search) {
+      const s = f.search.replace(/[,()%]/g, ' ').trim()
+      if (s) q = q.or(`invoice_number.ilike.%${s}%,customer_display_name.ilike.%${s}%,customer_phone.ilike.%${s}%`)
+    }
     const { data, error } = await q
     if (error) throw error
     return (data ?? []).map((s) => ({
@@ -104,7 +118,7 @@ export const salesService = {
   async record(
     key: string,
     orgId: string,
-    v: { site_id: string; date: string; lines: SaleLineInput[]; amount_received: number; payment_method?: string; customer_name?: string; customer_phone?: string; reference?: string; notes?: string },
+    v: { site_id: string; date: string; lines: SaleLineInput[]; amount_received: number; payment_method?: string; customer_id?: string; customer_name?: string; customer_phone?: string; due_date?: string; reference?: string; notes?: string },
   ) {
     const { data, error } = await supabase.rpc('record_sale', {
       p_key: key,
@@ -118,9 +132,11 @@ export const salesService = {
       p_customer_phone: blankToNull(v.customer_phone) ?? undefined,
       p_reference: blankToNull(v.reference) ?? undefined,
       p_notes: blankToNull(v.notes) ?? undefined,
+      p_customer: blankToNull(v.customer_id) ?? undefined,
+      p_due_date: blankToNull(v.due_date) ?? undefined,
     })
     if (error) throw error
-    return data as { sale_id: string; total: number }
+    return data as { sale_id: string; invoice_number: string; total: number }
   },
 
   async recordPayment(key: string, v: { sale_id: string; amount: number; date: string; method: string; reference?: string }) {

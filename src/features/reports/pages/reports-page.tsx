@@ -5,6 +5,7 @@ import { Download, Info, Printer } from 'lucide-react'
 import { useAuth, useCurrency } from '@/features/auth/context/auth-provider'
 import { useSiteScope } from '@/shared/context/site-scope'
 import { reportsService, type Period } from '@/features/reports/services/reports.service'
+import { positionService } from '@/features/finance/services/position.service'
 import { RequirePermission } from '@/features/auth/components/route-guards'
 import { Card, CardHeader, CardTitle } from '@/shared/components/ui/card'
 import { Badge } from '@/shared/components/ui/badge'
@@ -151,6 +152,7 @@ export function ReportsPage() {
             <>
               <TabsTrigger value="finance">Income and expenses</TabsTrigger>
               <TabsTrigger value="sales">Sales</TabsTrigger>
+              <TabsTrigger value="profit">Cash vs profit</TabsTrigger>
             </>
           ) : null}
           {ops ? (
@@ -190,6 +192,11 @@ export function ReportsPage() {
             <TabsContent value="sales">
               <RequirePermission permission={['reports.financial', 'finance.view']} mode="all">
                 <SalesReport p={p} />
+              </RequirePermission>
+            </TabsContent>
+            <TabsContent value="profit">
+              <RequirePermission permission={['reports.financial', 'finance.view']} mode="all">
+                <ProfitReport p={p} />
               </RequirePermission>
             </TabsContent>
             <TabsContent value="sites">
@@ -391,6 +398,66 @@ function SalesReport({ p }: { p: Period }) {
         { header: 'Sales', align: 'right', cell: (r) => n(r.sales), csv: (r) => r.sales },
       ]}
     />
+  )
+}
+
+function ProfitReport({ p }: { p: Period }) {
+  const { activeOrgId } = useAuth()
+  const currency = useCurrency()
+  const q = useQuery({ queryKey: ['reports', activeOrgId, 'profit', p], enabled: !!activeOrgId, queryFn: () => positionService.profitComparison(activeOrgId!, p) })
+  const m = (v: number) => formatMoney(v, currency)
+  return (
+    <QueryState query={q}>
+      {(r) => (
+        <div className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Cash operating surplus</CardTitle>
+                <p className="text-sm text-muted-foreground">Money actually received minus money actually paid in the period.</p>
+              </CardHeader>
+              <dl className="space-y-2 px-5 pb-5 text-sm">
+                <Line label="Money in" value={m(r.cash.money_in)} hint={`${m(r.cash.money_in_for_sales)} of it for invoices`} />
+                <Line label="Money out" value={m(-r.cash.money_out)} hint={`${m(r.cash.money_out_on_bills)} of it on supplier bills`} />
+                <Line label="Cash surplus" value={m(r.cash.surplus)} strong />
+              </dl>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Operating profit (accrual)</CardTitle>
+                <p className="text-sm text-muted-foreground">Sales invoiced and costs billed or paid directly in the period, whether or not money has changed hands.</p>
+              </CardHeader>
+              <dl className="space-y-2 px-5 pb-5 text-sm">
+                <Line label="Sales invoiced" value={m(r.accrual.sales_invoiced)} />
+                <Line label="Other income" value={m(r.accrual.other_income)} />
+                <Line label="Supplier bills" value={m(-r.accrual.supplier_bills)} />
+                <Line label="Other expenses paid" value={m(-r.accrual.direct_expenses)} />
+                <Line label="Operating profit" value={m(r.accrual.profit)} strong />
+              </dl>
+            </Card>
+          </div>
+          <Card className="p-5 text-sm">
+            <p className="font-medium">Why they differ</p>
+            <p className="mt-1 text-muted-foreground">
+              {m(r.difference.sales_not_yet_received)} invoiced in the period has not been received yet, and {m(r.difference.bills_not_yet_paid)} billed by suppliers has not been paid.
+              Profit here excludes the value of stock still on hand and equipment depreciation, so it is an operating estimate, not audited accounts.
+            </p>
+          </Card>
+        </div>
+      )}
+    </QueryState>
+  )
+}
+
+function Line({ label, value, hint, strong }: { label: string; value: string; hint?: string; strong?: boolean }) {
+  return (
+    <div className={strong ? 'flex items-baseline justify-between gap-4 border-t pt-2 text-base font-semibold' : 'flex items-baseline justify-between gap-4'}>
+      <dt>
+        {label}
+        {hint ? <span className="block text-xs font-normal text-muted-foreground">{hint}</span> : null}
+      </dt>
+      <dd className="tabular">{value}</dd>
+    </div>
   )
 }
 
